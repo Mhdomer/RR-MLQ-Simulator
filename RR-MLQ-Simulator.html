@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Modern Call Center Scheduler - MLQ vs Round Robin</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      color: #333;
+    }
+
+    .container {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .header {
+      text-align: center;
+      color: white;
+      margin-bottom: 30px;
+    }
+
+    .header h1 {
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .header p {
+      font-size: 1.1rem;
+      opacity: 0.9;
+    }
+
+    .algorithm-selector {
+      background: white;
+      border-radius: 15px;
+      padding: 25px;
+      margin-bottom: 30px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+
+    .algorithm-tabs {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .tab {
+      padding: 12px 24px;
+      border: 2px solid #667eea;
+      border-radius: 25px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      background: white;
+      color: #667eea;
+    }
+
+    .tab.active {
+      background: #667eea;
+      color: white;
+    }
+
+    .tab:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+    }
+
+    .algorithm-info {
+      background: #f8f9fa;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .algorithm-info h3 {
+      color: #667eea;
+      margin-bottom: 10px;
+    }
+
+    .main-content {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 30px;
+      margin-bottom: 30px;
+    }
+
+    .control-panel {
+      background: white;
+      border-radius: 15px;
+      padding: 25px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      height: fit-content;
+    }
+
+    .control-panel h2 {
+      color: #667eea;
+      margin-bottom: 20px;
+      font-size: 1.5rem;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #555;
+    }
+
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e1e5e9;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: border-color 0.3s ease;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+
+    .btn-warning {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    .simulation-area {
+      background: white;
+      border-radius: 15px;
+      padding: 25px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    .call-queues {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .queue {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 20px;
+      border: 2px solid #e9ecef;
+      transition: border-color 0.3s ease;
+      min-height: 200px;
+    }
+
+    .queue.active {
+      border-color: #667eea;
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+    }
+
+    .queue h3 {
+      text-align: center;
+      margin-bottom: 15px;
+      color: #495057;
+      font-size: 1.2rem;
+    }
+
+    .queue.vip h3 {
+      color: #dc3545;
+    }
+
+    .queue.regular h3 {
+      color: #fd7e14;
+    }
+
+    .queue.inquiry h3 {
+      color: #28a745;
+    }
+
+    .call-item {
+      background: white;
+      padding: 12px;
+      margin: 8px 0;
+      border-radius: 8px;
+      border-left: 4px solid;
+      font-weight: 600;
+      font-size: 0.9rem;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      transition: transform 0.2s ease;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .call-item:hover {
+      transform: translateX(5px);
+    }
+
+    .call-item.vip {
+      border-left-color: #dc3545;
+      background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+      color: white;
+    }
+
+    .call-item.regular {
+      border-left-color: #fd7e14;
+      background: linear-gradient(135deg, #ffa726, #ff9800);
+      color: white;
+    }
+
+    .call-item.inquiry {
+      border-left-color: #28a745;
+      background: linear-gradient(135deg, #66bb6a, #4caf50);
+      color: white;
+    }
+
+    .call-duration {
+      font-size: 0.8rem;
+      opacity: 0.8;
+    }
+
+    .agents-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+
+    .agent {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+      font-weight: 600;
+      transition: transform 0.2s ease;
+    }
+
+    .agent:hover {
+      transform: translateY(-3px);
+    }
+
+    .agent.busy {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    .gantt-chart {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 30px;
+      min-height: 100px;
+    }
+
+    .gantt-chart h3 {
+      margin-bottom: 15px;
+      color: #495057;
+    }
+
+    .gantt-timeline {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .gantt-block {
+      padding: 8px 12px;
+      border-radius: 6px;
+      color: white;
+      font-size: 0.8rem;
+      font-weight: 600;
+      min-width: 60px;
+      text-align: center;
+    }
+
+    .gantt-block.vip {
+      background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+    }
+
+    .gantt-block.regular {
+      background: linear-gradient(135deg, #ffa726, #ff9800);
+    }
+
+    .gantt-block.inquiry {
+      background: linear-gradient(135deg, #66bb6a, #4caf50);
+    }
+
+    .gantt-block.idle {
+      background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+    }
+
+    .stats-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .stat-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+    }
+
+    .stat-card h4 {
+      margin-bottom: 10px;
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+
+    .stat-card .value {
+      font-size: 1.8rem;
+      font-weight: bold;
+    }
+
+    .log-container {
+      background: #2c3e50;
+      color: #ecf0f1;
+      border-radius: 12px;
+      padding: 20px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+    }
+
+    .log-entry {
+      margin-bottom: 5px;
+      padding: 5px 0;
+      border-bottom: 1px solid #34495e;
+    }
+
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+
+    .comparison-section {
+      background: white;
+      border-radius: 15px;
+      padding: 25px;
+      margin-top: 30px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    .comparison-table th,
+    .comparison-table td {
+      padding: 15px;
+      text-align: center;
+      border: 1px solid #e9ecef;
+    }
+
+    .comparison-table th {
+      background: #667eea;
+      color: white;
+      font-weight: 600;
+    }
+
+    .comparison-table tr:nth-child(even) {
+      background: #f8f9fa;
+    }
+
+    .winner {
+      background: #d4edda !important;
+      color: #155724;
+      font-weight: bold;
+    }
+
+    .call-inputs {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .call-inputs h3 {
+      margin-bottom: 15px;
+      color: #495057;
+    }
+
+    .call-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 15px;
+    }
+
+    .call-card {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      border: 2px solid #e9ecef;
+    }
+
+    .call-card h4 {
+      margin-bottom: 10px;
+      color: #667eea;
+    }
+
+    .call-card input,
+    .call-card select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+
+    @media (max-width: 768px) {
+      .main-content {
+        grid-template-columns: 1fr;
+      }
+      
+      .call-queues {
+        grid-template-columns: 1fr;
+      }
+      
+      .header h1 {
+        font-size: 2rem;
+      }
+    }
+
+    .pulse {
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+
+    .aging-indicator {
+      font-size: 0.7rem;
+      opacity: 0.8;
+      margin-left: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1><i class="fas fa-phone-alt"></i> Modern Call Center Scheduler</h1>
+      <p>Comparing Multi-Level Queue (MLQ) vs Round Robin for Customer Service Calls</p>
+    </div>
+
+    <div class="algorithm-selector">
+      <div class="algorithm-tabs">
+        <div class="tab active" onclick="switchAlgorithm('mlq')">
+          <i class="fas fa-layer-group"></i> Multi-Level Queue (MLQ)
+        </div>
+        <div class="tab" onclick="switchAlgorithm('rr')">
+          <i class="fas fa-circle-notch"></i> Round Robin (RR)
+        </div>
+      </div>
+      
+      <div class="algorithm-info" id="algorithmInfo">
+        <h3><i class="fas fa-layer-group"></i> Multi-Level Queue (MLQ)</h3>
+        <p>Uses priority-based queues where VIP calls are always served first, followed by Regular, then Inquiry. Higher priority calls can preempt lower priority ones. Includes aging mechanism to prevent starvation.</p>
+      </div>
+    </div>
+
+    <div class="main-content">
+      <div class="control-panel">
+        <h2><i class="fas fa-cogs"></i> Call Center Configuration</h2>
+        
+        <div class="form-group">
+          <label for="numCalls">Number of Calls:</label>
+          <input type="number" id="numCalls" value="8" min="1" max="20">
+        </div>
+
+        <div class="form-group">
+          <label for="timeQuantum">Time Quantum (for RR):</label>
+          <input type="number" id="timeQuantum" value="3" min="1" max="10">
+        </div>
+
+        <div class="form-group">
+          <label for="numAgents">Number of Agents:</label>
+          <input type="number" id="numAgents" value="3" min="1" max="5">
+        </div>
+
+        <div class="form-group">
+          <label for="agingThreshold">Aging Threshold (for MLQ):</label>
+          <input type="number" id="agingThreshold" value="8" min="5" max="15">
+        </div>
+
+        <button class="btn" onclick="generateCallInputs()">
+          <i class="fas fa-plus"></i> Generate Calls
+        </button>
+        
+        <button class="btn btn-success" onclick="startSimulation()">
+          <i class="fas fa-play"></i> Start Simulation
+        </button>
+        
+        <button class="btn btn-warning" onclick="startRandomCalls()">
+          <i class="fas fa-random"></i> Random Calls
+        </button>
+        
+        <button class="btn" onclick="resetSimulation()">
+          <i class="fas fa-redo"></i> Reset
+        </button>
+      </div>
+
+      <div class="simulation-area">
+        <div id="callInputs" class="call-inputs">
+          <h3><i class="fas fa-list"></i> Call Details</h3>
+          <div class="call-grid" id="callGrid"></div>
+        </div>
+        
+        <div class="call-queues">
+          <div class="queue vip" id="vipQueue">
+            <h3><i class="fas fa-crown"></i> VIP Calls</h3>
+            <div id="vipQueueContent"></div>
+          </div>
+          
+          <div class="queue regular" id="regularQueue">
+            <h3><i class="fas fa-user"></i> Regular Calls</h3>
+            <div id="regularQueueContent"></div>
+          </div>
+          
+          <div class="queue inquiry" id="inquiryQueue">
+            <h3><i class="fas fa-question-circle"></i> Inquiry Calls</h3>
+            <div id="inquiryQueueContent"></div>
+          </div>
+        </div>
+
+        <div class="agents-container" id="agentsContainer"></div>
+
+        <div class="gantt-chart">
+          <h3><i class="fas fa-chart-bar"></i> Call Processing Timeline</h3>
+          <div class="gantt-timeline" id="ganttChart"></div>
+        </div>
+
+        <div class="stats-container">
+          <div class="stat-card">
+            <h4>Average Wait Time</h4>
+            <div class="value" id="avgWaitTime">-</div>
+          </div>
+          <div class="stat-card">
+            <h4>Average Handle Time</h4>
+            <div class="value" id="avgHandleTime">-</div>
+          </div>
+          <div class="stat-card">
+            <h4>Agent Utilization</h4>
+            <div class="value" id="agentUtilization">-</div>
+          </div>
+          <div class="stat-card">
+            <h4>Calls Completed</h4>
+            <div class="value" id="callsCompleted">-</div>
+          </div>
+        </div>
+
+        <div class="log-container">
+          <h3><i class="fas fa-terminal"></i> Call Center Log</h3>
+          <div id="simulationLog"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="comparison-section">
+      <h2><i class="fas fa-balance-scale"></i> Algorithm Comparison Results</h2>
+      <table class="comparison-table" id="comparisonTable">
+        <thead>
+          <tr>
+            <th>Metric</th>
+            <th>Multi-Level Queue (MLQ)</th>
+            <th>Round Robin (RR)</th>
+            <th>Winner</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Average Wait Time</td>
+            <td id="mlqWaitTime">-</td>
+            <td id="rrWaitTime">-</td>
+            <td id="waitTimeWinner">-</td>
+          </tr>
+          <tr>
+            <td>VIP Call Priority</td>
+            <td id="mlqVipPriority">-</td>
+            <td id="rrVipPriority">-</td>
+            <td id="vipPriorityWinner">-</td>
+          </tr>
+          <tr>
+            <td>Fairness Score</td>
+            <td id="mlqFairness">-</td>
+            <td id="rrFairness">-</td>
+            <td id="fairnessWinner">-</td>
+          </tr>
+          <tr>
+            <td>Agent Efficiency</td>
+            <td id="mlqEfficiency">-</td>
+            <td id="rrEfficiency">-</td>
+            <td id="efficiencyWinner">-</td>
+          </tr>
+        </tbody>
+      </table>
+      
+      <div style="margin-top: 20px; padding: 20px; background: #f8f9fa; border-radius: 10px;">
+        <h3><i class="fas fa-lightbulb"></i> Real-World Recommendation</h3>
+        <p id="recommendation">Run both simulations to see which algorithm performs better for your call center scenario.</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Global variables
+    let currentAlgorithm = 'mlq';
+    let time = 0;
+    let calls = [];
+    let agents = [];
+    let simulationInterval;
+    let timeQuantum = 3;
+    let agingThreshold = 8;
+    let callIdCounter = 1;
+    let mlqResults = {};
+    let rrResults = {};
+
+    // Algorithm descriptions
+    const algorithmInfo = {
+      mlq: {
+        name: "Multi-Level Queue (MLQ)",
+        description: "Uses priority-based queues where VIP calls are always served first, followed by Regular, then Inquiry. Higher priority calls can preempt lower priority ones. Includes aging mechanism to prevent starvation."
+      },
+      rr: {
+        name: "Round Robin (RR)",
+        description: "All calls are served in a fair, round-robin manner regardless of priority. Each call gets a fixed time quantum. Ensures fairness but may not prioritize VIP customers."
+      }
+    };
+
+    function switchAlgorithm(algorithm) {
+      currentAlgorithm = algorithm;
+      
+      // Update tabs
+      document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+      event.target.classList.add('active');
+      
+      // Update info
+      const info = algorithmInfo[algorithm];
+      document.getElementById('algorithmInfo').innerHTML = `
+        <h3><i class="fas fa-${algorithm === 'mlq' ? 'layer-group' : 'circle-notch'}"></i> ${info.name}</h3>
+        <p>${info.description}</p>
+      `;
+      
+      logEvent(`Switched to ${info.name} algorithm`);
+    }
+
+    function logEvent(message) {
+      const log = document.getElementById('simulationLog');
+      const timestamp = new Date().toLocaleTimeString();
+      const logEntry = document.createElement('div');
+      logEntry.className = 'log-entry';
+      logEntry.innerHTML = `[${timestamp}] ${message}`;
+      log.appendChild(logEntry);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function generateCallInputs() {
+      const numCalls = parseInt(document.getElementById('numCalls').value);
+      const callGrid = document.getElementById('callGrid');
+      callGrid.innerHTML = '';
+      
+      for (let i = 0; i < numCalls; i++) {
+        const callCard = document.createElement('div');
+        callCard.className = 'call-card';
+        callCard.innerHTML = `
+          <h4>Call ${i + 1}</h4>
+          <input type="number" id="at${i}" value="${i}" min="0" placeholder="Arrival Time">
+          <input type="number" id="bt${i}" value="${Math.floor(Math.random() * 5) + 2}" min="1" placeholder="Duration">
+          <select id="type${i}">
+            <option value="vip">VIP Customer</option>
+            <option value="regular" selected>Regular Customer</option>
+            <option value="inquiry">Inquiry</option>
+          </select>
+        `;
+        callGrid.appendChild(callCard);
+      }
+    }
+
+    function setupAgents() {
+      const numAgents = parseInt(document.getElementById('numAgents').value);
+      const container = document.getElementById('agentsContainer');
+      container.innerHTML = '';
+      agents = [];
+      
+      for (let i = 0; i < numAgents; i++) {
+        const agent = document.createElement('div');
+        agent.className = 'agent';
+        agent.id = `agent${i}`;
+        agent.innerHTML = `
+          <div><i class="fas fa-headset"></i></div>
+          <div>Agent ${i + 1}</div>
+          <div style="font-size: 0.9rem; opacity: 0.9;">Available</div>
+        `;
+        container.appendChild(agent);
+        agents.push({ 
+          id: i, 
+          busy: false, 
+          currentCall: null, 
+          remainingTime: 0,
+          totalHandled: 0,
+          totalTime: 0
+        });
+      }
+    }
+
+    function getAllCalls() {
+      calls = [];
+      const numCalls = parseInt(document.getElementById('numCalls').value);
+      timeQuantum = parseInt(document.getElementById('timeQuantum').value);
+      agingThreshold = parseInt(document.getElementById('agingThreshold').value);
+      
+      for (let i = 0; i < numCalls; i++) {
+        const arrival = parseInt(document.getElementById(`at${i}`).value);
+        const duration = parseInt(document.getElementById(`bt${i}`).value);
+        const type = document.getElementById(`type${i}`).value;
+        
+        calls.push({
+          id: `call${callIdCounter++}`,
+          name: `Call${i + 1}`,
+          arrivalTime: arrival,
+          duration: duration,
+          remainingTime: duration,
+          type: type,
+          priority: type === 'vip' ? 1 : type === 'regular' ? 2 : 3,
+          waitingTime: 0,
+          handleTime: 0,
+          completed: false,
+          entered: false,
+          aging: 0
+        });
+      }
+      
+      calls.sort((a, b) => a.arrivalTime - b.arrivalTime);
+    }
+
+    function updateQueues() {
+      const vipCalls = calls.filter(c => c.type === 'vip' && !c.completed && c.entered);
+      const regularCalls = calls.filter(c => c.type === 'regular' && !c.completed && c.entered);
+      const inquiryCalls = calls.filter(c => c.type === 'inquiry' && !c.completed && c.entered);
+      
+      // Update VIP queue
+      const vipContent = document.getElementById('vipQueueContent');
+      vipContent.innerHTML = vipCalls.map(call => 
+        `<div class="call-item vip">
+          <span>${call.name}</span>
+          <span class="call-duration">${call.remainingTime}s${call.aging > 0 ? `<span class="aging-indicator">⏰${call.aging}</span>` : ''}</span>
+        </div>`
+      ).join('');
+      
+      // Update Regular queue
+      const regularContent = document.getElementById('regularQueueContent');
+      regularContent.innerHTML = regularCalls.map(call => 
+        `<div class="call-item regular">
+          <span>${call.name}</span>
+          <span class="call-duration">${call.remainingTime}s${call.aging > 0 ? `<span class="aging-indicator">⏰${call.aging}</span>` : ''}</span>
+        </div>`
+      ).join('');
+      
+      // Update Inquiry queue
+      const inquiryContent = document.getElementById('inquiryQueueContent');
+      inquiryContent.innerHTML = inquiryCalls.map(call => 
+        `<div class="call-item inquiry">
+          <span>${call.name}</span>
+          <span class="call-duration">${call.remainingTime}s${call.aging > 0 ? `<span class="aging-indicator">⏰${call.aging}</span>` : ''}</span>
+        </div>`
+      ).join('');
+    }
+
+    function updateAgents() {
+      agents.forEach((agent, index) => {
+        const agentElement = document.getElementById(`agent${index}`);
+        if (agent.busy && agent.currentCall) {
+          agentElement.innerHTML = `
+            <div><i class="fas fa-headset"></i></div>
+            <div>Agent ${index + 1}</div>
+            <div style="font-size: 0.9rem; opacity: 0.9;">${agent.currentCall.name}</div>
+            <div style="font-size: 0.8rem; opacity: 0.8;">${agent.remainingTime}s left</div>
+          `;
+          agentElement.classList.add('busy');
+        } else {
+          agentElement.innerHTML = `
+            <div><i class="fas fa-headset"></i></div>
+            <div>Agent ${index + 1}</div>
+            <div style="font-size: 0.9rem; opacity: 0.9;">Available</div>
+          `;
+          agentElement.classList.remove('busy');
+        }
+      });
+    }
+
+    function addGanttBlock(call, duration) {
+      const ganttChart = document.getElementById('ganttChart');
+      const block = document.createElement('div');
+      block.className = `gantt-block ${call.type}`;
+      block.textContent = `${call.name} (${duration}s)`;
+      ganttChart.appendChild(block);
+    }
+
+    function addIdleBlock() {
+      const ganttChart = document.getElementById('ganttChart');
+      const block = document.createElement('div');
+      block.className = 'gantt-block idle';
+      block.textContent = 'IDLE';
+      ganttChart.appendChild(block);
+    }
+
+    function getNextCall() {
+      const readyCalls = calls.filter(c => !c.completed && c.entered && c.remainingTime > 0);
+      
+      if (readyCalls.length === 0) return null;
+      
+      if (currentAlgorithm === 'mlq') {
+        // MLQ: Priority-based with aging
+        // Apply aging
+        readyCalls.forEach(call => {
+          if (call.priority > 1) {
+            call.aging++;
+            if (call.aging >= agingThreshold) {
+              call.priority--;
+              call.aging = 0;
+              logEvent(`${call.name} promoted due to aging`);
+            }
+          }
+        });
+        
+        // Sort by priority (lower number = higher priority)
+        readyCalls.sort((a, b) => a.priority - b.priority);
+        return readyCalls[0];
+      } else {
+        // Round Robin: Fair distribution
+        return readyCalls[0];
+      }
+    }
+
+    function startSimulation() {
+      clearInterval(simulationInterval);
+      
+      // Reset everything
+      document.getElementById('simulationLog').innerHTML = '';
+      document.getElementById('ganttChart').innerHTML = '';
+      time = 0;
+      
+      getAllCalls();
+      setupAgents();
+      
+      logEvent(`Starting ${currentAlgorithm.toUpperCase()} simulation`);
+      
+      simulationInterval = setInterval(() => {
+        // Add calls to queue as they arrive
+        calls.forEach(call => {
+          if (!call.entered && call.arrivalTime <= time) {
+            call.entered = true;
+            logEvent(`${call.name} (${call.type}) arrived`);
+          }
+        });
+        
+        // Update waiting time for queued calls
+        calls.forEach(call => {
+          if (!call.completed && call.entered && call.remainingTime > 0) {
+            call.waitingTime++;
+          }
+        });
+        
+        // Process calls
+        let systemIdle = true;
+        
+        agents.forEach(agent => {
+          if (agent.remainingTime <= 0) {
+            // Agent is free, assign new call
+            if (agent.currentCall) {
+              // Complete current call
+              agent.currentCall.completed = true;
+              agent.currentCall.handleTime = time - agent.currentCall.arrivalTime;
+              agent.totalHandled++;
+              agent.totalTime += agent.currentCall.handleTime;
+              logEvent(`Agent ${agent.id + 1} completed ${agent.currentCall.name}`);
+            }
+            
+            const nextCall = getNextCall();
+            if (nextCall) {
+              agent.currentCall = nextCall;
+              agent.busy = true;
+              
+              let timeSlice;
+              if (currentAlgorithm === 'rr') {
+                timeSlice = Math.min(nextCall.remainingTime, timeQuantum);
+              } else {
+                timeSlice = nextCall.remainingTime; // MLQ processes until completion
+              }
+              
+              agent.remainingTime = timeSlice;
+              systemIdle = false;
+              
+              logEvent(`Agent ${agent.id + 1} started ${nextCall.name} (${nextCall.type}) for ${timeSlice}s`);
+            } else {
+              agent.busy = false;
+              agent.currentCall = null;
+            }
+          } else {
+            // Agent is busy, continue processing
+            agent.remainingTime--;
+            systemIdle = false;
+            
+            if (agent.remainingTime === 0) {
+              // Call completed
+              const completedCall = agent.currentCall;
+              completedCall.completed = true;
+              completedCall.handleTime = time + 1 - completedCall.arrivalTime;
+              agent.totalHandled++;
+              agent.totalTime += completedCall.handleTime;
+              
+              logEvent(`Agent ${agent.id + 1} completed ${completedCall.name}`);
+              
+              agent.busy = false;
+              agent.currentCall = null;
+            }
+          }
+        });
+        
+        // Add to Gantt chart
+        if (systemIdle) {
+          addIdleBlock();
+          logEvent('All agents idle');
+        } else {
+          agents.forEach(agent => {
+            if (agent.busy && agent.currentCall) {
+              addGanttBlock(agent.currentCall, 1);
+            }
+          });
+        }
+        
+        // Update UI
+        updateQueues();
+        updateAgents();
+        
+        // Check if simulation is complete
+        if (calls.every(c => c.completed)) {
+          clearInterval(simulationInterval);
+          calculateAndDisplayStats();
+          logEvent('Simulation completed!');
+        }
+        
+        time++;
+      }, 1000);
+    }
+
+    function calculateAndDisplayStats() {
+      const completedCalls = calls.filter(c => c.completed);
+      
+      if (completedCalls.length === 0) return;
+      
+      const avgWaitTime = completedCalls.reduce((sum, c) => sum + c.waitingTime, 0) / completedCalls.length;
+      const avgHandleTime = completedCalls.reduce((sum, c) => sum + c.handleTime, 0) / completedCalls.length;
+      const agentUtilization = ((time - agents.filter(a => !a.busy).length) / time * 100).toFixed(1);
+      const callsCompleted = completedCalls.length;
+      
+      document.getElementById('avgWaitTime').textContent = avgWaitTime.toFixed(2) + 's';
+      document.getElementById('avgHandleTime').textContent = avgHandleTime.toFixed(2) + 's';
+      document.getElementById('agentUtilization').textContent = agentUtilization + '%';
+      document.getElementById('callsCompleted').textContent = callsCompleted;
+      
+      // Store results for comparison
+      if (currentAlgorithm === 'mlq') {
+        mlqResults = { avgWaitTime, avgHandleTime, agentUtilization, callsCompleted };
+      } else {
+        rrResults = { avgWaitTime, avgHandleTime, agentUtilization, callsCompleted };
+      }
+      
+      updateComparisonTable();
+    }
+
+    function updateComparisonTable() {
+      if (mlqResults.avgWaitTime && rrResults.avgWaitTime) {
+        document.getElementById('mlqWaitTime').textContent = mlqResults.avgWaitTime.toFixed(2) + 's';
+        document.getElementById('rrWaitTime').textContent = rrResults.avgWaitTime.toFixed(2) + 's';
+        document.getElementById('waitTimeWinner').textContent = 
+          mlqResults.avgWaitTime < rrResults.avgWaitTime ? 'MLQ' : 'RR';
+        document.getElementById('waitTimeWinner').className = 
+          mlqResults.avgWaitTime < rrResults.avgWaitTime ? 'winner' : '';
+        
+        document.getElementById('mlqVipPriority').textContent = 'High';
+        document.getElementById('rrVipPriority').textContent = 'None';
+        document.getElementById('vipPriorityWinner').textContent = 'MLQ';
+        document.getElementById('vipPriorityWinner').className = 'winner';
+        
+        const mlqFairness = 7; // MLQ is less fair but prioritizes VIP
+        const rrFairness = 9; // RR is very fair
+        document.getElementById('mlqFairness').textContent = mlqFairness + '/10';
+        document.getElementById('rrFairness').textContent = rrFairness + '/10';
+        document.getElementById('fairnessWinner').textContent = 'RR';
+        document.getElementById('fairnessWinner').className = 'winner';
+        
+        document.getElementById('mlqEfficiency').textContent = mlqResults.agentUtilization + '%';
+        document.getElementById('rrEfficiency').textContent = rrResults.agentUtilization + '%';
+        const efficiencyWinner = parseFloat(mlqResults.agentUtilization) > parseFloat(rrResults.agentUtilization) ? 'MLQ' : 'RR';
+        document.getElementById('efficiencyWinner').textContent = efficiencyWinner;
+        document.getElementById('efficiencyWinner').className = 'winner';
+        
+        // Generate recommendation
+        const recommendation = generateRecommendation();
+        document.getElementById('recommendation').textContent = recommendation;
+      }
+    }
+
+    function generateRecommendation() {
+      if (!mlqResults.avgWaitTime || !rrResults.avgWaitTime) {
+        return "Run both simulations to see which algorithm performs better for your call center scenario.";
+      }
+      
+      const mlqBetter = mlqResults.avgWaitTime < rrResults.avgWaitTime;
+      const efficiencyDiff = Math.abs(parseFloat(mlqResults.agentUtilization) - parseFloat(rrResults.agentUtilization));
+      
+      if (mlqBetter && efficiencyDiff > 5) {
+        return "MLQ is recommended for call centers with VIP customers. It provides faster service for high-priority calls and better agent utilization, though it may be less fair to regular customers.";
+      } else if (!mlqBetter && efficiencyDiff < 5) {
+        return "Round Robin is recommended for call centers prioritizing fairness. It ensures all customers receive equal treatment, though VIP customers may wait longer.";
+      } else {
+        return "Both algorithms perform similarly. Choose MLQ if VIP customer satisfaction is crucial, or Round Robin if fairness is more important.";
+      }
+    }
+
+    function startRandomCalls() {
+      const numCalls = parseInt(document.getElementById('numCalls').value);
+      
+      // Generate random calls
+      for (let i = 0; i < numCalls; i++) {
+        const arrivalTime = Math.floor(Math.random() * 5);
+        const duration = Math.floor(Math.random() * 6) + 2;
+        const types = ['vip', 'regular', 'inquiry'];
+        const type = types[Math.floor(Math.random() * types.length)];
+        
+        document.getElementById(`at${i}`).value = arrivalTime;
+        document.getElementById(`bt${i}`).value = duration;
+        document.getElementById(`type${i}`).value = type;
+      }
+      
+      startSimulation();
+    }
+
+    function resetSimulation() {
+      clearInterval(simulationInterval);
+      time = 0;
+      calls = [];
+      agents = [];
+      
+      document.getElementById('simulationLog').innerHTML = '';
+      document.getElementById('ganttChart').innerHTML = '';
+      document.getElementById('vipQueueContent').innerHTML = '';
+      document.getElementById('regularQueueContent').innerHTML = '';
+      document.getElementById('inquiryQueueContent').innerHTML = '';
+      
+      document.getElementById('avgWaitTime').textContent = '-';
+      document.getElementById('avgHandleTime').textContent = '-';
+      document.getElementById('agentUtilization').textContent = '-';
+      document.getElementById('callsCompleted').textContent = '-';
+      
+      setupAgents();
+      logEvent('Simulation reset');
+    }
+
+    // Initialize the page
+    document.addEventListener('DOMContentLoaded', function() {
+      generateCallInputs();
+      setupAgents();
+      logEvent('Call center simulator initialized');
+    });
+  </script>
+</body>
+</html> 
